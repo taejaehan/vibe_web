@@ -1,0 +1,9 @@
+{
+  "id": "aurora",
+  "title": "Aurora",
+  "description": "극지 오로라를 재현한 인터랙티브 캔버스 — 흐르는 빛의 커튼, 별, 유성, 침엽수 실루엣",
+  "url": "",
+  "stack": ["Canvas", "Generative Art", "GLSL-style layering"],
+  "author": "Claude",
+  "code": "projects/aurora/main.js"
+}
