@@ -1,0 +1,10 @@
+{
+    "id": "heesu_chung",
+    "title": "에디터",
+    "description": "에디터입니다",
+    "url": "https://creative-coding-eight.vercel.app/",
+    "stack": ["Next.js", "Python", "CLIP", "OpenCV", "Tailwind"],
+    "author": "정희수",
+    "code": "projects/heesu_chung/main.js"
+  }
+  
