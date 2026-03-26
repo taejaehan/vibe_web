@@ -4,15 +4,93 @@ JSON + Canvas 기반 크리에이티브 포트폴리오. 누구나 자신만의 
 
 **Live:** https://vibe-web-gamma.vercel.app
 
-## 실행
+---
+
+## 참여하기 (처음부터 끝까지)
+
+### 1. 이 저장소를 Fork
+
+GitHub에서 오른쪽 위 **Fork** 버튼을 클릭합니다. 본인 계정에 복사본이 생깁니다.
+
+### 2. Fork한 저장소를 클론
 
 ```bash
-git clone https://github.com/taejaehan/vibe_web.git
+git clone https://github.com/{본인-github-id}/vibe_web.git
 cd vibe_web
 npm install
-npm run dev
-# → http://localhost:3000
 ```
+
+### 3. 브랜치 생성
+
+```bash
+git checkout -b add/{your-id}
+```
+
+> ID는 **영문 소문자 + 하이픈**만 사용 (예: `john-doe`, `myproject`)
+
+### 4. 파일 3개 작성
+
+**A. 캔버스 코드** — `public/projects/{your-id}/main.js`
+
+```javascript
+function setup(cell) {
+  cell.data.x = cell.width / 2
+  cell.data.y = cell.height / 2
+}
+
+function draw(ctx, world) {
+  const { cellW, cellH, frame, myData } = world
+  ctx.fillStyle = '#1a1a2e'
+  ctx.fillRect(0, 0, cellW, cellH)
+
+  const x = myData.x + Math.sin(frame * 0.03) * 50
+  const y = myData.y + Math.cos(frame * 0.02) * 30
+  ctx.beginPath()
+  ctx.arc(x, y, 20, 0, Math.PI * 2)
+  ctx.fillStyle = `hsl(${frame % 360}, 70%, 60%)`
+  ctx.fill()
+}
+```
+
+**B. 프로젝트 정보** — `public/data/{your-id}.json`
+
+```json
+{
+  "id": "{your-id}",
+  "title": "프로젝트 이름",
+  "description": "한두 줄 설명",
+  "url": "https://your-project-url.com",
+  "stack": ["React", "Three.js"],
+  "author": "이름",
+  "code": "projects/{your-id}/main.js"
+}
+```
+
+**C. config에 ID 추가** — `public/data/config.json`
+
+`players` 배열 **맨 뒤에** 본인 ID 추가 (기존 순서 변경 금지)
+
+### 5. 로컬에서 확인
+
+```bash
+npm run dev
+# → http://localhost:3000 에서 본인 셀이 보이는지 확인
+```
+
+### 6. 커밋 & 푸시
+
+```bash
+git add public/projects/{your-id}/main.js public/data/{your-id}.json public/data/config.json
+git commit -m "add: {your-id} 프로젝트 추가"
+git push origin add/{your-id}
+```
+
+### 7. Pull Request 생성
+
+GitHub에서 본인 Fork 저장소에 가면 **"Compare & pull request"** 버튼이 나타납니다.
+클릭해서 PR을 생성하면 끝. 머지되면 자동으로 사이트에 반영됩니다.
+
+---
 
 ## 프로젝트 구조
 
@@ -37,50 +115,7 @@ npm run dev
 
 ---
 
-## 참여 방법
-
-### Step 1. 브랜치 생성
-
-```bash
-git checkout -b add/{your-id}
-```
-
-> ID는 **영문 소문자 + 하이픈**만 사용 (예: `john-doe`, `myproject`)
-
-### Step 2. 캔버스 코드 작성
-
-`public/projects/{your-id}/main.js` 파일을 만듭니다.
-
-```javascript
-// public/projects/{your-id}/main.js
-
-function setup(cell) {
-  // 한 번 실행되는 초기화
-  // cell.width / cell.height: 셀 크기
-  // cell.data: 프레임 간 데이터 저장용 객체
-  cell.data.x = cell.width / 2
-  cell.data.y = cell.height / 2
-}
-
-function draw(ctx, world) {
-  // 매 프레임 실행
-  const { cellW, cellH, frame, myData } = world
-
-  // 배경 (반드시 매 프레임 그려야 함)
-  ctx.fillStyle = '#1a1a2e'
-  ctx.fillRect(0, 0, cellW, cellH)
-
-  // 예시: 움직이는 원
-  const x = myData.x + Math.sin(frame * 0.03) * 50
-  const y = myData.y + Math.cos(frame * 0.02) * 30
-  ctx.beginPath()
-  ctx.arc(x, y, 20, 0, Math.PI * 2)
-  ctx.fillStyle = `hsl(${frame % 360}, 70%, 60%)`
-  ctx.fill()
-}
-```
-
-#### API 레퍼런스
+## API 레퍼런스
 
 | 변수 | 설명 |
 |---|---|
@@ -90,26 +125,7 @@ function draw(ctx, world) {
 | `world.frame` | 프레임 카운터 (1부터 증가) |
 | `world.myData` | `setup()`에서 `cell.data`에 저장한 객체 |
 
-> **중요**: 좌표를 절대값으로 하드코딩하면 화면 크기가 바뀔 때 깨집니다.
-> 항상 `cellW`, `cellH` 기준 비율로 작성하세요. (예: `cellW / 2`, `cellH * 0.3`)
-
-### Step 3. JSON 메타데이터 작성
-
-`public/data/{your-id}.json` 파일을 만듭니다.
-
-```json
-{
-  "id": "{your-id}",
-  "title": "프로젝트 이름",
-  "description": "이 프로젝트가 무엇인지 한두 줄 설명",
-  "url": "https://your-project-url.com",
-  "stack": ["React", "Three.js"],
-  "author": "이름",
-  "code": "projects/{your-id}/main.js"
-}
-```
-
-| 필드 | 필수 | 설명 |
+| JSON 필드 | 필수 | 설명 |
 |---|---|---|
 | `id` | O | 영문 소문자 ID (폴더명과 동일) |
 | `title` | O | 프로젝트 이름 |
@@ -119,40 +135,8 @@ function draw(ctx, world) {
 | `author` | - | 만든 사람 이름 |
 | `code` | O | 캔버스 코드 경로 (`projects/{id}/main.js`) |
 
-### Step 4. config.json에 본인 ID 추가
-
-`public/data/config.json`의 `players` 배열 **맨 뒤에** 자신의 ID를 추가합니다.
-
-```json
-{
-  "players": ["mugic", "vidgen", "art137", "burger", "zealot", "fortune", "{your-id}"]
-}
-```
-
-> **기존 ID 순서를 변경하거나 삭제하지 마세요.** 맨 뒤에 추가만 합니다.
-
-### Step 5. 로컬 테스트
-
-```bash
-npm run dev
-```
-
-확인 사항:
-- [ ] 자신의 셀이 그리드에 나타나는가
-- [ ] 에러 없이 애니메이션이 동작하는가
-- [ ] 호버 시 프로젝트 정보가 표시되는가
-- [ ] 클릭 시 URL로 이동하는가
-- [ ] 브라우저 콘솔에 에러가 없는가
-
-### Step 6. PR 올리기
-
-```bash
-git add public/projects/{your-id}/main.js public/data/{your-id}.json public/data/config.json
-git commit -m "add: {your-id} 프로젝트 추가"
-git push origin add/{your-id}
-```
-
-GitHub에서 Pull Request를 생성합니다. main에 머지되면 자동으로 배포됩니다.
+> **중요**: 좌표를 절대값으로 하드코딩하면 화면 크기가 바뀔 때 깨집니다.
+> 항상 `cellW`, `cellH` 기준 비율로 작성하세요. (예: `cellW / 2`, `cellH * 0.3`)
 
 ---
 
