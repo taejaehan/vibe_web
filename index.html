@@ -118,9 +118,69 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
+    #search-hint {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      z-index: 100;
+      color: rgba(255, 255, 255, 0.25);
+      font-size: 12px;
+      padding: 4px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      transition: opacity 0.3s ease;
+    }
+
+    #search-hint.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #search-bar {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    #search-bar.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #search-input {
+      width: 320px;
+      padding: 10px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    #search-input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    #search-input:focus {
+      border-color: rgba(100, 180, 255, 0.5);
+    }
   </style>
 </head>
 <body>
+  <div id="search-hint">/ 를 눌러 검색</div>
+  <div id="search-bar">
+    <input id="search-input" type="text" placeholder="프로젝트 검색 (이름, 설명, 작성자)">
+  </div>
   <div id="wrapper">
     <canvas id="main-canvas"></canvas>
     <div id="overlay"></div>

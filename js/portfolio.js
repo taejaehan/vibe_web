@@ -6,7 +6,17 @@ const overlay = document.getElementById('overlay')
 
 // 플레이어(프로젝트) 상태
 const players = []
+let filteredPlayers = []
 let frame = 0
+let searchQuery = ''
+
+// 애니메이션 상태: 각 플레이어의 현재 렌더링 위치/크기
+const animState = new Map()
+const LERP_SPEED = 0.08
+
+function lerp(a, b, t) {
+  return a + (b - a) * t
+}
 
 // 캔버스 리사이즈 (뷰포트 전체)
 function resize() {
@@ -41,7 +51,60 @@ async function loadPlayers() {
     }
   }
 
+  applyFilter()
+}
+
+// 검색 필터 적용
+function applyFilter() {
+  if (!searchQuery) {
+    filteredPlayers = [...players]
+  } else {
+    const q = searchQuery.toLowerCase()
+    filteredPlayers = players.filter(p => {
+      const m = p.meta
+      return m.title.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q) ||
+        (m.author || '').toLowerCase().includes(q) ||
+        m.stack.some(s => s.toLowerCase().includes(q))
+    })
+  }
+  filteredPlayers.forEach(p => { p.needsSetup = true })
+  updateTargets()
   buildOverlay()
+}
+
+// 목표 위치/크기 갱신
+function updateTargets() {
+  const { cols, rows } = calcGrid(filteredPlayers.length)
+  const cellW = canvas.width / cols
+  const cellH = canvas.height / rows
+
+  filteredPlayers.forEach((player, index) => {
+    const col = index % cols
+    const row = Math.floor(index / cols)
+    const target = { x: col * cellW, y: row * cellH, w: cellW, h: cellH }
+
+    if (!animState.has(player.id)) {
+      // 첫 등장: 현재값을 목표값으로 즉시 세팅
+      animState.set(player.id, {
+        cur: { ...target },
+        target,
+        visible: true,
+        opacity: 1
+      })
+    } else {
+      const state = animState.get(player.id)
+      state.target = target
+      state.visible = true
+    }
+  })
+
+  // 필터에서 빠진 플레이어는 페이드아웃
+  for (const [id, state] of animState) {
+    if (!filteredPlayers.find(p => p.id === id)) {
+      state.visible = false
+    }
+  }
 }
 
 // 동적 그리드 계산
@@ -59,14 +122,15 @@ function calcGrid(count) {
 // 오버레이 (프로젝트 정보 카드)
 function buildOverlay() {
   overlay.innerHTML = ''
-  const { cols, rows } = calcGrid(players.length)
+  const { cols, rows } = calcGrid(filteredPlayers.length)
 
-  players.forEach((player, index) => {
+  filteredPlayers.forEach((player, index) => {
     const col = index % cols
     const row = Math.floor(index / cols)
 
     const card = document.createElement('div')
     card.className = 'player-card'
+    card.dataset.playerId = player.id
     card.style.left = `${(col / cols) * 100}%`
     card.style.top = `${(row / rows) * 100}%`
     card.style.width = `${100 / cols}%`
@@ -98,6 +162,20 @@ function buildOverlay() {
   })
 }
 
+// 오버레이 카드 위치를 애니메이션 상태에 맞춰 갱신
+function updateOverlayPositions() {
+  const cards = overlay.querySelectorAll('.player-card')
+  cards.forEach(card => {
+    const state = animState.get(card.dataset.playerId)
+    if (!state) return
+    const { cur } = state
+    card.style.left = `${cur.x}px`
+    card.style.top = `${cur.y}px`
+    card.style.width = `${cur.w}px`
+    card.style.height = `${cur.h}px`
+  })
+}
+
 // 에러 셀 그리기
 function drawError(ctx, x, y, w, h, player) {
   ctx.fillStyle = '#1a1a2e'
@@ -120,36 +198,44 @@ function render() {
   ctx.fillStyle = '#0a0a1a'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-  if (players.length === 0) {
+  if (filteredPlayers.length === 0) {
     ctx.fillStyle = '#555'
     ctx.font = 'bold 28px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2)
+    ctx.fillText(players.length === 0 ? 'Loading...' : 'No results', canvas.width / 2, canvas.height / 2)
     requestAnimationFrame(render)
     return
   }
 
-  const { cols, rows } = calcGrid(players.length)
-  const cellW = canvas.width / cols
-  const cellH = canvas.height / rows
+  // 애니메이션: 현재값을 목표값으로 보간
+  for (const [, state] of animState) {
+    if (!state.visible) continue
+    state.cur.x = lerp(state.cur.x, state.target.x, LERP_SPEED)
+    state.cur.y = lerp(state.cur.y, state.target.y, LERP_SPEED)
+    state.cur.w = lerp(state.cur.w, state.target.w, LERP_SPEED)
+    state.cur.h = lerp(state.cur.h, state.target.h, LERP_SPEED)
+  }
 
-  players.forEach((player, index) => {
-    const col = index % cols
-    const row = Math.floor(index / cols)
-    const x = col * cellW
-    const y = row * cellH
+  // 오버레이도 애니메이션에 맞춰 이동
+  updateOverlayPositions()
+
+  filteredPlayers.forEach((player) => {
+    const state = animState.get(player.id)
+    if (!state) return
+
+    const { x, y, w, h } = state.cur
 
     ctx.save()
     ctx.beginPath()
-    ctx.rect(x, y, cellW, cellH)
+    ctx.rect(x, y, w, h)
     ctx.clip()
     ctx.translate(x, y)
 
     const world = {
       frame,
-      cellW,
-      cellH,
+      cellW: w,
+      cellH: h,
       myData: player.data || {}
     }
 
@@ -160,7 +246,7 @@ function render() {
     if (result.error) {
       player.hasError = true
       player.errorMessage = result.error
-      drawError(ctx, x, y, cellW, cellH, player)
+      drawError(ctx, x, y, w, h, player)
     } else {
       player.hasError = false
     }
@@ -169,7 +255,9 @@ function render() {
   })
 
   // 그리드 라인
-  const { cols: c, rows: r } = calcGrid(players.length)
+  const { cols: c, rows: r } = calcGrid(filteredPlayers.length)
+  const cellW = canvas.width / c
+  const cellH = canvas.height / r
   ctx.strokeStyle = 'rgba(255,255,255,0.05)'
   ctx.lineWidth = 1
   for (let i = 1; i < c; i++) {
@@ -188,10 +276,39 @@ function render() {
   requestAnimationFrame(render)
 }
 
+// 검색
+const searchBar = document.getElementById('search-bar')
+const searchInput = document.getElementById('search-input')
+const searchHint = document.getElementById('search-hint')
+
+searchInput.addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim()
+  applyFilter()
+})
+
+// / 키로 검색창 열기, Escape로 닫기
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement !== searchInput) {
+    e.preventDefault()
+    searchBar.classList.add('visible')
+    searchHint.classList.add('hidden')
+    searchInput.focus()
+  }
+  if (e.key === 'Escape') {
+    searchInput.value = ''
+    searchQuery = ''
+    searchBar.classList.remove('visible')
+    searchHint.classList.remove('hidden')
+    searchInput.blur()
+    applyFilter()
+  }
+})
+
 // 초기화
 resize()
 window.addEventListener('resize', () => {
   resize()
+  updateTargets()
   buildOverlay()
 })
 
