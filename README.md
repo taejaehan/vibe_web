@@ -2,11 +2,13 @@
 
 JSON + Canvas 기반 크리에이티브 포트폴리오. 누구나 자신만의 캔버스 비주얼과 프로젝트 정보를 추가하고 PR을 올려 참여할 수 있습니다.
 
+**Live:** https://vibe-web-gamma.vercel.app
+
 ## 실행
 
 ```bash
-git clone https://github.com/{owner}/vibe-canvas.git
-cd vibe-canvas
+git clone https://github.com/taejaehan/vibe_web.git
+cd vibe_web
 npm install
 npm run dev
 # → http://localhost:3000
@@ -19,15 +21,19 @@ npm run dev
 ├── js/
 │   ├── portfolio.js        ← 렌더링 엔진 (수정 금지)
 │   └── engine.js           ← 코드 실행기 (수정 금지)
-├── data/
-│   ├── config.json         ← 참여자 ID 목록 (본인 ID만 추가)
-│   ├── mugic.json          ← 예시 — 프로젝트 메타데이터
-│   └── {your-id}.json      ← ✅ 새로 만들기
-└── projects/
-    ├── mugic/main.js        ← 예시 — 캔버스 코드
-    └── {your-id}/
-        └── main.js          ← ✅ 새로 만들기
+├── public/
+│   ├── data/
+│   │   ├── config.json     ← 참여자 ID 목록 (본인 ID만 추가)
+│   │   ├── mugic.json      ← 예시 — 프로젝트 메타데이터
+│   │   └── {your-id}.json  ← 새로 만들기
+│   └── projects/
+│       ├── mugic/main.js   ← 예시 — 캔버스 코드
+│       └── {your-id}/
+│           └── main.js     ← 새로 만들기
+└── vite.config.js
 ```
+
+> `public/` 안의 파일은 Vite 빌드 시 그대로 `dist/`에 복사됩니다.
 
 ---
 
@@ -43,10 +49,10 @@ git checkout -b add/{your-id}
 
 ### Step 2. 캔버스 코드 작성
 
-`projects/{your-id}/main.js` 파일을 만듭니다.
+`public/projects/{your-id}/main.js` 파일을 만듭니다.
 
 ```javascript
-// projects/{your-id}/main.js
+// public/projects/{your-id}/main.js
 
 function setup(cell) {
   // 한 번 실행되는 초기화
@@ -89,7 +95,7 @@ function draw(ctx, world) {
 
 ### Step 3. JSON 메타데이터 작성
 
-`data/{your-id}.json` 파일을 만듭니다.
+`public/data/{your-id}.json` 파일을 만듭니다.
 
 ```json
 {
@@ -115,7 +121,7 @@ function draw(ctx, world) {
 
 ### Step 4. config.json에 본인 ID 추가
 
-`data/config.json`의 `players` 배열 **맨 뒤에** 자신의 ID를 추가합니다.
+`public/data/config.json`의 `players` 배열 **맨 뒤에** 자신의 ID를 추가합니다.
 
 ```json
 {
@@ -141,12 +147,12 @@ npm run dev
 ### Step 6. PR 올리기
 
 ```bash
-git add projects/{your-id}/main.js data/{your-id}.json data/config.json
+git add public/projects/{your-id}/main.js public/data/{your-id}.json public/data/config.json
 git commit -m "add: {your-id} 프로젝트 추가"
 git push origin add/{your-id}
 ```
 
-GitHub에서 Pull Request를 생성합니다.
+GitHub에서 Pull Request를 생성합니다. main에 머지되면 자동으로 배포됩니다.
 
 ---
 
@@ -156,9 +162,9 @@ GitHub에서 Pull Request를 생성합니다.
 
 | 파일 | 할 수 있는 것 |
 |---|---|
-| `projects/{your-id}/main.js` | 새로 생성 |
-| `data/{your-id}.json` | 새로 생성 |
-| `data/config.json` | **본인 ID만 맨 뒤에 추가** |
+| `public/projects/{your-id}/main.js` | 새로 생성 |
+| `public/data/{your-id}.json` | 새로 생성 |
+| `public/data/config.json` | **본인 ID만 맨 뒤에 추가** |
 
 ### 절대 수정하면 안 되는 파일
 
@@ -167,16 +173,20 @@ GitHub에서 Pull Request를 생성합니다.
 | `index.html` | 공용 페이지 |
 | `js/portfolio.js` | 렌더링 엔진 |
 | `js/engine.js` | 코드 실행기 |
-| `data/{남의-id}.json` | 다른 사람의 프로젝트 정보 |
-| `projects/{남의-id}/*` | 다른 사람의 캔버스 코드 |
+| `public/data/{남의-id}.json` | 다른 사람의 프로젝트 정보 |
+| `public/projects/{남의-id}/*` | 다른 사람의 캔버스 코드 |
 
 > PR에서 본인 파일 외 다른 파일이 변경되어 있으면 머지되지 않습니다.
 
 ---
 
+## 배포
+
+Vercel로 자동 배포됩니다. PR을 머지하면 Production이 자동 업데이트됩니다.
+
 ## 팁
 
-- `projects/` 폴더의 기존 코드를 참고하면 좋습니다
+- `public/projects/` 폴더의 기존 코드를 참고하면 좋습니다
 - `ctx.fillRect(0, 0, cellW, cellH)`로 매 프레임 배경을 그려야 이전 프레임이 지워집니다
 - 반투명 배경(`rgba`)을 사용하면 잔상(trail) 효과를 낼 수 있습니다
 - `frame` 값과 `Math.sin()`/`Math.cos()`를 조합하면 자연스러운 애니메이션이 됩니다
