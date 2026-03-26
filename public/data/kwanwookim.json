@@ -1,0 +1,9 @@
+{
+  "id": "kwanwookim",
+  "title": "Random Typography",
+  "description": "랜덤하게 변하는 글자들이 공간을 떠다니는 타이포그래피 비주얼",
+  "url": "https://random-typeface.vercel.app/",
+  "stack": ["Canvas 2D", "Typography", "Generative Art"],
+  "author": "Kwanwookim",
+  "code": "projects/kwanwookim/main.js"
+}
