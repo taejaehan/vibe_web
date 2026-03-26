@@ -1,0 +1,63 @@
+name: PR 검증
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 변경된 파일 확인
+        run: |
+          echo "=== 변경된 파일 목록 ==="
+          gh pr diff ${{ github.event.pull_request.number }} --name-only
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 잘못된 위치 검사
+        run: |
+          ERRORS=0
+
+          # 루트 data/ 또는 projects/에 파일을 넣었는지 검사
+          BAD_FILES=$(gh pr diff ${{ github.event.pull_request.number }} --name-only | grep -E "^(data|projects)/[^/]" || true)
+          if [ -n "$BAD_FILES" ]; then
+            echo "::error::파일이 잘못된 위치에 있습니다. public/ 폴더 안에 넣어야 합니다."
+            echo ""
+            echo "잘못된 파일:"
+            echo "$BAD_FILES"
+            echo ""
+            echo "올바른 위치:"
+            echo "  캔버스 코드 → public/projects/{id}/main.js"
+            echo "  프로젝트 JSON → public/data/{id}.json"
+            echo "  참여자 목록 → public/data/config.json"
+            ERRORS=1
+          fi
+
+          # 수정하면 안 되는 파일 검사
+          PROTECTED=$(gh pr diff ${{ github.event.pull_request.number }} --name-only | grep -E "^(index\.html|js/|vite\.config\.js)" || true)
+          if [ -n "$PROTECTED" ]; then
+            echo "::error::수정 금지된 파일이 변경되었습니다: $PROTECTED"
+            ERRORS=1
+          fi
+
+          if [ $ERRORS -ne 0 ]; then
+            echo ""
+            echo "README를 확인해주세요: https://github.com/${{ github.repository }}#readme"
+            exit 1
+          fi
+
+          echo "검증 통과!"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: config.json에 ID 추가 확인
+        run: |
+          CONFIG_CHANGED=$(gh pr diff ${{ github.event.pull_request.number }} --name-only | grep "^public/data/config.json$" || true)
+          if [ -z "$CONFIG_CHANGED" ]; then
+            echo "::warning::public/data/config.json이 변경되지 않았습니다. 본인 ID를 추가했는지 확인하세요."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
