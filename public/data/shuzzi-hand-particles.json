@@ -1,0 +1,9 @@
+{
+  "id": "shuzzi-hand-particles",
+  "title": "Hand Motion Particles",
+  "description": "Gesture-driven particle morphing — 5000 particles flow between organic shapes (sphere, spiral, heart, starburst) using MediaPipe hand tracking",
+  "url": "https://hand-particles-nine.vercel.app",
+  "stack": ["Three.js", "MediaPipe", "Creative Coding"],
+  "author": "shuzzi",
+  "code": "projects/shuzzi-hand-particles/main.js"
+}

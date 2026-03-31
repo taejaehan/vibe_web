@@ -1,0 +1,9 @@
+{
+  "id": "shuzzi-hub",
+  "title": "Project Hub",
+  "description": "Interconnected node network visualizing project relationships — pulsing data flows between nodes representing each portfolio piece",
+  "url": "https://hub-chi-ruddy.vercel.app",
+  "stack": ["Vite", "Canvas 2D", "Creative Coding"],
+  "author": "shuzzi",
+  "code": "projects/shuzzi-hub/main.js"
+}

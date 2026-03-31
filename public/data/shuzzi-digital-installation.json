@@ -1,0 +1,9 @@
+{
+  "id": "shuzzi-digital-installation",
+  "title": "Digital Installation",
+  "description": "Explorable voxel world with floating light pillars — an interactive digital art installation with isometric perspective and ambient particle atmosphere",
+  "url": "https://digital-installation.vercel.app",
+  "stack": ["React", "Three.js", "Rapier Physics"],
+  "author": "shuzzi",
+  "code": "projects/shuzzi-digital-installation/main.js"
+}
