@@ -89,45 +89,17 @@ function draw(ctx, world) {
 
   const qW = hw,
     qH = hh;
+  const paperColor = "#f5f0eb";
 
   function drawFrontPage() {
-    // Front page (initial page) is the visible cover.
-    const coverGrad = ctx.createLinearGradient(0, 0, qW, qH);
-    coverGrad.addColorStop(0, "#d7c4ad");
-    coverGrad.addColorStop(1, "#b49574");
-    ctx.fillStyle = coverGrad;
+    // Use plain neutral paper so front/back surfaces stay visually consistent.
+    ctx.fillStyle = paperColor;
     ctx.fillRect(0, 0, qW, qH);
-
-    ctx.strokeStyle = "rgba(45,33,22,0.35)";
-    ctx.lineWidth = Math.max(1, qH * 0.01);
-    ctx.strokeRect(qW * 0.06, qH * 0.08, qW * 0.88, qH * 0.84);
-
-    ctx.fillStyle = "rgba(38,28,18,0.22)";
-    ctx.fillRect(qW * 0.12, qH * 0.2, qW * 0.76, qH * 0.08);
-
-    ctx.fillStyle = "rgba(36,24,14,0.75)";
-    ctx.font = `600 ${Math.max(8, qH * 0.09)}px 'SF Pro', sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("MIMESIS", qW * 0.5, qH * 0.24);
-    ctx.textAlign = "start";
-    ctx.textBaseline = "alphabetic";
   }
 
   function drawUnderPage() {
-    // Back page uses the same cover palette but stays visually blank.
-    const coverGrad = ctx.createLinearGradient(0, 0, qW, qH);
-    coverGrad.addColorStop(0, "#d7c4ad");
-    coverGrad.addColorStop(1, "#b49574");
-    ctx.fillStyle = coverGrad;
+    ctx.fillStyle = paperColor;
     ctx.fillRect(0, 0, qW, qH);
-
-    ctx.strokeStyle = "rgba(45,33,22,0.18)";
-    ctx.lineWidth = Math.max(1, qH * 0.01);
-    ctx.strokeRect(qW * 0.06, qH * 0.08, qW * 0.88, qH * 0.84);
-
-    ctx.fillStyle = "rgba(38,28,18,0.08)";
-    ctx.fillRect(qW * 0.12, qH * 0.2, qW * 0.76, qH * 0.08);
   }
 
   // Always paint a deterministic front cover baseline for Q1.
@@ -304,23 +276,23 @@ function draw(ctx, world) {
           );
           cylGrad.addColorStop(
             0.0,
-            `rgba(248,243,238,${0.97 * backFaceAlpha})`,
+            `rgba(245,240,235,${0.97 * backFaceAlpha})`,
           );
           cylGrad.addColorStop(
             0.08,
-            `rgba(195,186,176,${0.97 * backFaceAlpha})`,
+            `rgba(230,225,220,${0.97 * backFaceAlpha})`,
           );
           cylGrad.addColorStop(
             0.35,
-            `rgba(162,154,144,${0.95 * backFaceAlpha})`,
+            `rgba(210,205,200,${0.95 * backFaceAlpha})`,
           );
           cylGrad.addColorStop(
             0.65,
-            `rgba(178,170,161,${0.9 * backFaceAlpha})`,
+            `rgba(220,215,210,${0.9 * backFaceAlpha})`,
           );
           cylGrad.addColorStop(
             1.0,
-            `rgba(205,197,188,${0.82 * backFaceAlpha})`,
+            `rgba(235,230,225,${0.82 * backFaceAlpha})`,
           );
           ctx.fillStyle = cylGrad;
           ctx.fill();
