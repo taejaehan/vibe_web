@@ -115,27 +115,19 @@ function draw(ctx, world) {
   }
 
   function drawUnderPage() {
-    // Revealed page is the inside page.
-    ctx.fillStyle = "#faf7f4";
+    // Back page uses the same cover palette but stays visually blank.
+    const coverGrad = ctx.createLinearGradient(0, 0, qW, qH);
+    coverGrad.addColorStop(0, "#d7c4ad");
+    coverGrad.addColorStop(1, "#b49574");
+    ctx.fillStyle = coverGrad;
     ctx.fillRect(0, 0, qW, qH);
 
-    const lineCount = 7;
-    for (let i = 0; i < lineCount; i++) {
-      const yy = qH * (0.18 + i * 0.1);
-      const drift = Math.sin(f * 0.03 + i * 0.8) * (qW * 0.01);
-      const lw = qW * (0.58 + 0.22 * Math.sin(f * 0.018 + i * 1.1));
-      const lx = qW * 0.14 + drift;
-      ctx.fillStyle = `rgba(70,58,44,${0.08 + 0.04 * Math.sin(f * 0.025 + i)})`;
-      ctx.fillRect(lx, yy, lw, qH * 0.012);
-    }
+    ctx.strokeStyle = "rgba(45,33,22,0.18)";
+    ctx.lineWidth = Math.max(1, qH * 0.01);
+    ctx.strokeRect(qW * 0.06, qH * 0.08, qW * 0.88, qH * 0.84);
 
-    ctx.fillStyle = "rgba(70,58,44,0.42)";
-    ctx.font = `500 ${Math.max(7, qH * 0.06)}px 'SF Pro', sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("inside", qW * 0.5, qH * 0.82);
-    ctx.textAlign = "start";
-    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "rgba(38,28,18,0.08)";
+    ctx.fillRect(qW * 0.12, qH * 0.2, qW * 0.76, qH * 0.08);
   }
 
   // Always paint a deterministic front cover baseline for Q1.
