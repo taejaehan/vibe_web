@@ -385,39 +385,70 @@ function draw(ctx, world) {
   ctx.fillStyle = "#111111";
   ctx.fillRect(0, 0, hw, hh);
 
-  // Wiper band — sharp moving horizontal reveal line
-  const wiperX = ((f * 1.6) % (hw * 1.4)) - hw * 0.2;
+  // Windshield wiper sweep: pivot near bottom-center, oscillating left/right.
+  const pivotX = hw * 0.5;
+  const pivotY = hh * 1.06;
+  const sweepAngle = Math.sin(f * 0.03) * 0.95; // left/right from center
+  const dirX = Math.sin(sweepAngle);
+  const dirY = -Math.cos(sweepAngle);
 
   // Text-block rows (revealed left of wiper)
   const rowCount = 6;
   const rowH = hh / (rowCount + 1);
   for (let r = 0; r < rowCount; r++) {
     const ry = (r + 0.5) * rowH;
-    const blockW = hw * (0.3 + ((r * 53) % 100) / 200);
-    const blockX = hw * 0.08;
+    const blockW = hw * (0.46 + ((r * 53) % 100) / 300);
+    const blockX = pivotX - blockW * 0.5;
+    const centerX = blockX + blockW * 0.5;
 
-    const revealed = clamp((wiperX - blockX) / blockW, 0, 1);
+    let xOnBlade = centerX;
+    if (Math.abs(dirY) > 0.001) {
+      xOnBlade = pivotX + ((ry - pivotY) * dirX) / dirY;
+    }
+    const halfW = blockW * 0.5;
+    const revealed = clamp(Math.abs(xOnBlade - centerX) / halfW, 0, 1);
 
     // Dark unrevealed block
     ctx.fillStyle = "rgba(255,255,255,0.07)";
     ctx.fillRect(blockX, ry - rowH * 0.18, blockW, rowH * 0.36);
 
-    // Bright revealed portion
+    // Bright revealed portion expands from center toward current sweep side.
     if (revealed > 0) {
       ctx.fillStyle = `rgba(255,255,255,${0.75 + 0.2 * Math.sin(f * 0.05 + r)})`;
-      ctx.fillRect(blockX, ry - rowH * 0.18, blockW * revealed, rowH * 0.36);
+      if (sweepAngle >= 0) {
+        ctx.fillRect(centerX, ry - rowH * 0.18, halfW * revealed, rowH * 0.36);
+      } else {
+        ctx.fillRect(
+          centerX - halfW * revealed,
+          ry - rowH * 0.18,
+          halfW * revealed,
+          rowH * 0.36,
+        );
+      }
     }
   }
 
-  // Wiper blade
-  if (wiperX > 0 && wiperX < hw) {
-    const bladeGrad = ctx.createLinearGradient(wiperX - 6, 0, wiperX + 10, 0);
-    bladeGrad.addColorStop(0, "rgba(255,255,255,0)");
-    bladeGrad.addColorStop(0.4, "rgba(255,255,255,0.9)");
-    bladeGrad.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = bladeGrad;
-    ctx.fillRect(wiperX - 6, 0, 16, hh);
-  }
+  // Wiper blade highlight (rotating from center pivot)
+  const bladeLen = hh * 0.95;
+  const tipX = pivotX + dirX * bladeLen;
+  const tipY = pivotY + dirY * bladeLen;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.88)";
+  ctx.lineCap = "round";
+  ctx.lineWidth = Math.max(2, hh * 0.018);
+  ctx.beginPath();
+  ctx.moveTo(pivotX, pivotY);
+  ctx.lineTo(tipX, tipY);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255,255,255,0.2)";
+  ctx.lineWidth = Math.max(6, hh * 0.05);
+  ctx.beginPath();
+  ctx.moveTo(pivotX, pivotY);
+  ctx.lineTo(tipX, tipY);
+  ctx.stroke();
+  ctx.restore();
 
   // Label
   ctx.fillStyle = "#ffffff";
