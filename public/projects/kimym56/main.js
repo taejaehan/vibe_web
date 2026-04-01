@@ -367,7 +367,7 @@ function draw(ctx, world) {
   }
 
   // Label
-  ctx.fillStyle = "rgba(0,0,0,0.30)";
+  ctx.fillStyle = "#000000";
   ctx.font = `600 ${Math.max(9, cellH * 0.035)}px 'SF Pro', sans-serif`;
   ctx.fillText("iOS Page Curl", 12, qH - 12);
   ctx.restore();
@@ -420,7 +420,7 @@ function draw(ctx, world) {
   }
 
   // Label
-  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.fillStyle = "#ffffff";
   ctx.font = `${Math.max(7, cellH * 0.032)}px 'SF Mono', monospace`;
   ctx.fillText("Wiper Typography", 10, hh - 10);
 
@@ -497,7 +497,7 @@ function draw(ctx, world) {
   ctx.restore();
 
   // Label
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.fillStyle = "#000000";
   ctx.font = `${Math.max(7, cellH * 0.032)}px 'SF Mono', monospace`;
   ctx.fillText("Black & White Circle", 10, hh - 10);
 
@@ -566,7 +566,7 @@ function draw(ctx, world) {
   });
 
   // Label
-  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.fillStyle = "#ffffff";
   ctx.font = `${Math.max(7, cellH * 0.032)}px 'SF Mono', monospace`;
   ctx.fillText("Staggered Text", 10, hh - 10);
 
