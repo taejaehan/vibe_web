@@ -1,17 +1,605 @@
+// ─── Mimesis: "The instinct of imitation is implanted in man from childhood."
+// Four quadrants, each embodying one sub-project.
+
 function setup(cell) {
-  cell.data.x = cell.width / 2;
-  cell.data.y = cell.height / 2;
+  // Local start frame for page-curl timing so it always starts closed.
+  cell.data.pageCurlStartFrame = null;
+  cell.data.pageCurlInitDone = false;
+  cell.data.pageCurlFirstDrawDone = false;
+
+  // Staggered text characters
+  cell.data.chars = "MIMESIS".split("").map((ch, i) => ({
+    ch,
+    phase: i * 0.38, // stagger offset
+    flipY: 0, // 0..1 flip progress
+  }));
+
+  // Wiper typography — lines of text-like blocks
+  cell.data.wiperBlocks = Array.from({ length: 7 }, (_, i) => ({
+    y: 0.12 + i * 0.11,
+    width: 0.25 + ((i * 37) % 100) / 250,
+    alpha: 0.0,
+  }));
+
+  // Yin-yang — arc angles
+  cell.data.yinPhase = 0;
+
+  // Page curl corner
+  cell.data.curlProgress = 0;
+  cell.data.curlDir = 1;
+}
+
+// ─── Utilities ──────────────────────────────────────────────────────────────
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+function easeInOut(t) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
 }
 
 function draw(ctx, world) {
   const { cellW, cellH, frame, myData } = world;
-  ctx.fillStyle = "#1a1a2e";
+  const { chars, wiperBlocks, curlProgress } = myData;
+
+  // Reinitialize curl state when implementation changes so first render is deterministic.
+  const PAGE_CURL_STATE_VERSION = 4;
+  if (myData.pageCurlStateVersion !== PAGE_CURL_STATE_VERSION) {
+    myData.pageCurlStateVersion = PAGE_CURL_STATE_VERSION;
+    myData.pageCurlStartFrame = frame;
+    myData.pageCurlInitDone = true;
+    myData.pageCurlFirstDrawDone = false;
+  }
+
+  if (!myData.pageCurlInitDone || !Number.isFinite(myData.pageCurlStartFrame)) {
+    myData.pageCurlStartFrame = frame;
+    myData.pageCurlInitDone = true;
+  }
+
+  // Mark first draw completion but do not force a flat cover frame.
+  if (!myData.pageCurlFirstDrawDone) myData.pageCurlFirstDrawDone = true;
+
+  const f = frame;
+  const hw = cellW * 0.5;
+  const hh = cellH * 0.5;
+
+  // ── Background: warm paper white ─────────────────────────────────────────
+  ctx.fillStyle = "#f5f0eb";
   ctx.fillRect(0, 0, cellW, cellH);
 
-  const x = myData.x + Math.sin(frame * 0.03) * 50;
-  const y = myData.y + Math.cos(frame * 0.02) * 30;
+  // Thin cross divider
+  ctx.strokeStyle = "rgba(0,0,0,0.08)";
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(x, y, 20, 0, Math.PI * 2);
-  ctx.fillStyle = `hsl(${frame % 360}, 70%, 60%)`;
+  ctx.moveTo(hw, 0);
+  ctx.lineTo(hw, cellH);
+  ctx.moveTo(0, hh);
+  ctx.lineTo(cellW, hh);
+  ctx.stroke();
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Q1 — TOP LEFT: iOS Page Curl
+  // ══════════════════════════════════════════════════════════════════════════
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, hw, hh);
+  ctx.clip();
+
+  const qW = hw,
+    qH = hh;
+  const paperColor = "#f5f0eb";
+
+  function drawFrontPage() {
+    // Use plain neutral paper so front/back surfaces stay visually consistent.
+    ctx.fillStyle = paperColor;
+    ctx.fillRect(0, 0, qW, qH);
+  }
+
+  function drawUnderPage() {
+    ctx.fillStyle = paperColor;
+    ctx.fillRect(0, 0, qW, qH);
+  }
+
+  // Always paint a deterministic front cover baseline for Q1.
+  // Curl visuals are layered over this to avoid startup white flashes.
+  drawFrontPage();
+
+  // Yoyo loop: page curls and then un-curls back to the corner.
+  // Use local frame and a short startup delay so first render is always front page.
+  const startDelay = 0;
+  const curlFrame = Math.max(0, f - myData.pageCurlStartFrame - startDelay);
+  const phaseOffsetFrames = 40;
+  const tp = 0.5 - 0.5 * Math.cos((curlFrame + phaseOffsetFrames) * 0.02);
+  const tSmooth = tp;
+
+  const diag = Math.sqrt(qW * qW + qH * qH);
+  // Peel about 85% of the way and return
+  const maxDrag = diag * 0.85;
+
+  const dragX = qW - (qW / diag) * (tSmooth * maxDrag);
+  const dragY = qH - (qH / diag) * (tSmooth * maxDrag);
+
+  const dvx = dragX - qW,
+    dvy = dragY - qH;
+  const dvLen = Math.sqrt(dvx * dvx + dvy * dvy);
+
+  if (dvLen >= 2 && tSmooth > 0.16) {
+    const dnx = dvx / dvLen,
+      dny = dvy / dvLen;
+    const flx = -dny,
+      fly = dnx;
+    const fmx = (qW + dragX) * 0.5,
+      fmy = (qH + dragY) * 0.5;
+
+    const foldPts = [];
+    const edges = [
+      [0, 0, qW, 0],
+      [qW, 0, qW, qH],
+      [qW, qH, 0, qH],
+      [0, qH, 0, 0],
+    ];
+    for (const [ax, ay, bx, by] of edges) {
+      const edx = bx - ax,
+        edy = by - ay;
+      const den = flx * edy - fly * edx;
+      if (Math.abs(den) < 1e-8) continue;
+      const s = ((ax - fmx) * edy - (ay - fmy) * edx) / den;
+      const u = ((ax - fmx) * fly - (ay - fmy) * flx) / den;
+      if (u > -0.001 && u < 1.001)
+        foldPts.push({ x: fmx + s * flx, y: fmy + s * fly });
+    }
+    const uniq = [];
+    for (const pt of foldPts)
+      if (
+        !uniq.some(
+          (q) => Math.abs(q.x - pt.x) < 0.5 && Math.abs(q.y - pt.y) < 0.5,
+        )
+      )
+        uniq.push(pt);
+
+    if (uniq.length >= 2) {
+      uniq.sort(
+        (a, b) =>
+          (a.x - fmx) * flx +
+          (a.y - fmy) * fly -
+          ((b.x - fmx) * flx + (b.y - fmy) * fly),
+      );
+      const fp1 = uniq[0],
+        fp2 = uniq[1];
+
+      function clipToPeelSide(positive) {
+        const corners = [
+          { x: 0, y: 0 },
+          { x: qW, y: 0 },
+          { x: qW, y: qH },
+          { x: 0, y: qH },
+        ];
+        const out = [];
+        function inside(pt) {
+          const d = (pt.x - fmx) * dnx + (pt.y - fmy) * dny;
+          return positive ? d >= 0 : d <= 0;
+        }
+        function intersect(a, b) {
+          const dx = b.x - a.x,
+            dy = b.y - a.y;
+          const num = (fmx - a.x) * dnx + (fmy - a.y) * dny;
+          const den = dx * dnx + dy * dny;
+          if (Math.abs(den) < 1e-8) return a;
+          const t2 = num / den;
+          return { x: a.x + t2 * dx, y: a.y + t2 * dy };
+        }
+        for (let i = 0; i < corners.length; i++) {
+          const curr = corners[i],
+            prev = corners[(i - 1 + 4) % 4];
+          if (inside(curr)) {
+            if (!inside(prev)) out.push(intersect(prev, curr));
+            out.push(curr);
+          } else if (inside(prev)) out.push(intersect(prev, curr));
+        }
+        return out;
+      }
+
+      // Soft cast shadow on under-page
+      ctx.save();
+      const spUnder = clipToPeelSide(true);
+      if (spUnder.length >= 2) {
+        ctx.beginPath();
+        ctx.moveTo(spUnder[0].x, spUnder[0].y);
+        for (let i = 1; i < spUnder.length; i++)
+          ctx.lineTo(spUnder[i].x, spUnder[i].y);
+        ctx.closePath();
+        ctx.clip();
+
+        // Prevent abrupt "cover -> page 2" jump by phasing in the revealed page.
+        const underReveal = clamp((tSmooth - 0.24) / 0.65, 0, 1);
+        ctx.globalAlpha = underReveal;
+        drawUnderPage();
+        ctx.globalAlpha = 1;
+
+        const sg = ctx.createLinearGradient(fmx, fmy, qW, qH);
+        sg.addColorStop(0, `rgba(0,0,0,${0.35 * Math.min(1, tSmooth * 2)})`);
+        sg.addColorStop(0.4, `rgba(0,0,0,${0.15 * Math.min(1, tSmooth * 2)})`);
+        sg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = sg;
+        ctx.fillRect(0, 0, qW, qH);
+      }
+      ctx.restore();
+
+      // Static front page (non-peeled)
+      ctx.save();
+      const spStatic = clipToPeelSide(false);
+      if (spStatic.length >= 2) {
+        ctx.beginPath();
+        ctx.moveTo(spStatic[0].x, spStatic[0].y);
+        for (let i = 1; i < spStatic.length; i++)
+          ctx.lineTo(spStatic[i].x, spStatic[i].y);
+        ctx.closePath();
+        ctx.clip(); // Mask the drawing to just the unpeeled area
+
+        drawFrontPage();
+
+        // Edge shadow where page bends
+        const eg = ctx.createLinearGradient(
+          fp1.x,
+          fp1.y,
+          fp1.x - dnx * 22,
+          fp1.y - dny * 22,
+        );
+        eg.addColorStop(0, `rgba(0,0,0,${0.15 * Math.min(1, tSmooth * 2)})`);
+        eg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = eg;
+        ctx.fillRect(0, 0, qW, qH);
+      }
+      ctx.restore();
+
+      // Back face of curling page (cylindrical lighting)
+      // Only show back face during active curl; fade out when returning to rest position
+      const backFaceAlpha =
+        Math.max(0, Math.min(1, (dvLen - 2) / 25)) *
+        Math.max(0, Math.min(1, (tSmooth - 0.08) / 0.15));
+      if (backFaceAlpha > 0.01) {
+        ctx.save();
+        const spBack = clipToPeelSide(true);
+        if (spBack.length >= 2) {
+          ctx.beginPath();
+          ctx.moveTo(spBack[0].x, spBack[0].y);
+          for (let i = 1; i < spBack.length; i++)
+            ctx.lineTo(spBack[i].x, spBack[i].y);
+          ctx.closePath();
+          const cylGrad = ctx.createLinearGradient(
+            fmx,
+            fmy,
+            fmx + dnx * dvLen * 0.9,
+            fmy + dny * dvLen * 0.9,
+          );
+          cylGrad.addColorStop(
+            0.0,
+            `rgba(245,240,235,${0.97 * backFaceAlpha})`,
+          );
+          cylGrad.addColorStop(
+            0.08,
+            `rgba(230,225,220,${0.97 * backFaceAlpha})`,
+          );
+          cylGrad.addColorStop(
+            0.35,
+            `rgba(210,205,200,${0.95 * backFaceAlpha})`,
+          );
+          cylGrad.addColorStop(
+            0.65,
+            `rgba(220,215,210,${0.9 * backFaceAlpha})`,
+          );
+          cylGrad.addColorStop(
+            1.0,
+            `rgba(235,230,225,${0.82 * backFaceAlpha})`,
+          );
+          ctx.fillStyle = cylGrad;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Crease glow
+      ctx.save();
+      ctx.lineCap = "round";
+      const alphaPulse = Math.min(1, tSmooth * 3); // fully solid after just a little movement
+      ctx.beginPath();
+      ctx.moveTo(fp1.x, fp1.y);
+      ctx.lineTo(fp2.x, fp2.y);
+      ctx.strokeStyle = `rgba(255,255,255,${0.28 * alphaPulse})`;
+      ctx.lineWidth = 18;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(fp1.x, fp1.y);
+      ctx.lineTo(fp2.x, fp2.y);
+      ctx.strokeStyle = `rgba(255,255,255,${0.5 * alphaPulse})`;
+      ctx.lineWidth = 7;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(fp1.x, fp1.y);
+      ctx.lineTo(fp2.x, fp2.y);
+      ctx.strokeStyle = `rgba(255,255,255,${0.88 * alphaPulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      // Degenerate fold geometry can happen near close/open boundaries.
+      // In that case, force the front page so the under-page never lingers.
+      drawFrontPage();
+    }
+  }
+
+  // Label
+  ctx.fillStyle = "#000000";
+  ctx.font = `600 ${Math.max(9, cellH * 0.035)}px 'SF Pro', sans-serif`;
+  ctx.fillText("iOS Page Curl", 12, qH - 12);
+  ctx.restore();
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Q2 — TOP RIGHT: Wiper Typography
+  // ══════════════════════════════════════════════════════════════════════════
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(hw, 0, hw, hh);
+  ctx.clip();
+  ctx.translate(hw, 0);
+
+  // Background
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(0, 0, hw, hh);
+
+  // Windshield wiper sweep: pivot near bottom-center, oscillating left/right.
+  const pivotX = hw * 0.5;
+  const pivotY = hh * 1.06;
+  const sweepAngle = Math.sin(f * 0.03) * 0.95; // left/right from center
+  const dirX = Math.sin(sweepAngle);
+  const dirY = -Math.cos(sweepAngle);
+
+  // Text-block rows (revealed left of wiper)
+  const rowCount = 6;
+  const rowH = hh / (rowCount + 1);
+  for (let r = 0; r < rowCount; r++) {
+    const ry = (r + 0.5) * rowH;
+    const blockW = hw * (0.46 + ((r * 53) % 100) / 300);
+    const blockX = pivotX - blockW * 0.5;
+    const centerX = blockX + blockW * 0.5;
+
+    let xOnBlade = centerX;
+    if (Math.abs(dirY) > 0.001) {
+      xOnBlade = pivotX + ((ry - pivotY) * dirX) / dirY;
+    }
+    const halfW = blockW * 0.5;
+    const revealed = clamp(Math.abs(xOnBlade - centerX) / halfW, 0, 1);
+
+    // Dark unrevealed block
+    ctx.fillStyle = "rgba(255,255,255,0.07)";
+    ctx.fillRect(blockX, ry - rowH * 0.18, blockW, rowH * 0.36);
+
+    // Bright revealed portion expands from center toward current sweep side.
+    if (revealed > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${0.75 + 0.2 * Math.sin(f * 0.05 + r)})`;
+      if (sweepAngle >= 0) {
+        ctx.fillRect(centerX, ry - rowH * 0.18, halfW * revealed, rowH * 0.36);
+      } else {
+        ctx.fillRect(
+          centerX - halfW * revealed,
+          ry - rowH * 0.18,
+          halfW * revealed,
+          rowH * 0.36,
+        );
+      }
+    }
+  }
+
+  // Wiper blade highlight (rotating from center pivot)
+  const bladeLen = hh * 0.95;
+  const tipX = pivotX + dirX * bladeLen;
+  const tipY = pivotY + dirY * bladeLen;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.88)";
+  ctx.lineCap = "round";
+  ctx.lineWidth = Math.max(2, hh * 0.018);
+  ctx.beginPath();
+  ctx.moveTo(pivotX, pivotY);
+  ctx.lineTo(tipX, tipY);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255,255,255,0.2)";
+  ctx.lineWidth = Math.max(6, hh * 0.05);
+  ctx.beginPath();
+  ctx.moveTo(pivotX, pivotY);
+  ctx.lineTo(tipX, tipY);
+  ctx.stroke();
+  ctx.restore();
+
+  // Label
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `${Math.max(9, cellH * 0.035)}px 'SF Mono', monospace`;
+  ctx.fillText("Wiper Typography", 10, hh - 10);
+
+  ctx.restore();
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Q3 — BOTTOM LEFT: Black & White Circle (Yin-Yang)
+  // ══════════════════════════════════════════════════════════════════════════
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, hh, hw, hh);
+  ctx.clip();
+  ctx.translate(0, hh);
+
+  ctx.fillStyle = "#f5f0eb";
+  ctx.fillRect(0, 0, hw, hh);
+
+  const ycx = hw * 0.5;
+  const ycy = hh * 0.5;
+  const yR = Math.min(hw, hh) * 0.34;
+
+  // Slowly rotating phase
+  const yPhase = f * 0.02;
+
+  // Draw yin-yang using two half-circles + two small circles
+  // Top half: black rotated by phase
+  ctx.save();
+  ctx.translate(ycx, ycy);
+  ctx.rotate(yPhase);
+
+  // Full black circle base
+  ctx.beginPath();
+  ctx.arc(0, 0, yR, 0, Math.PI * 2);
+  ctx.fillStyle = "#111";
   ctx.fill();
+
+  // White right half
+  ctx.beginPath();
+  ctx.arc(0, 0, yR, -Math.PI * 0.5, Math.PI * 0.5);
+  ctx.fillStyle = "#f5f0eb";
+  ctx.fill();
+
+  // White small top bump
+  ctx.beginPath();
+  ctx.arc(0, -yR * 0.5, yR * 0.5, 0, Math.PI * 2);
+  ctx.fillStyle = "#f5f0eb";
+  ctx.fill();
+
+  // Black small bottom bump
+  ctx.beginPath();
+  ctx.arc(0, yR * 0.5, yR * 0.5, 0, Math.PI * 2);
+  ctx.fillStyle = "#111";
+  ctx.fill();
+
+  // Inner dots
+  ctx.beginPath();
+  ctx.arc(0, -yR * 0.5, yR * 0.12, 0, Math.PI * 2);
+  ctx.fillStyle = "#111";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(0, yR * 0.5, yR * 0.12, 0, Math.PI * 2);
+  ctx.fillStyle = "#f5f0eb";
+  ctx.fill();
+
+  // Subtle pulse ring
+  const pRing = yR * (1.1 + 0.06 * Math.sin(f * 0.04));
+  ctx.beginPath();
+  ctx.arc(0, 0, pRing, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(0,0,0,${0.06 + 0.04 * Math.sin(f * 0.04)})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Label
+  ctx.fillStyle = "#000000";
+  ctx.font = `${Math.max(9, cellH * 0.035)}px 'SF Mono', monospace`;
+  ctx.fillText("Black & White Circle", 10, hh - 10);
+
+  ctx.restore();
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Q4 — BOTTOM RIGHT: Staggered Text
+  // ══════════════════════════════════════════════════════════════════════════
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(hw, hh, hw, hh);
+  ctx.clip();
+  ctx.translate(hw, hh);
+
+  ctx.fillStyle = "#0d0d0d";
+  ctx.fillRect(0, 0, hw, hh);
+
+  const word = "MIMESIS";
+  const fontSize = Math.min(hw / (word.length * 0.72), hh * 0.28);
+  ctx.font = `700 ${fontSize}px 'Arial Black', sans-serif`;
+  ctx.textBaseline = "middle";
+
+  const totalW = word.split("").reduce((acc, ch) => {
+    return acc + ctx.measureText(ch).width;
+  }, 0);
+  let tx = (hw - totalW) * 0.5;
+  const ty = hh * 0.5;
+  const cycleFrames = 180;
+  const charDelay = 9;
+  const appearPortion = 0.2;
+  const holdPortion = 0.55;
+
+  word.split("").forEach((ch, i) => {
+    const localFrame =
+      (((f - i * charDelay) % cycleFrames) + cycleFrames) % cycleFrames;
+    const t = localFrame / cycleFrames;
+
+    let alpha = 1;
+    let transY = 0;
+    let scaleY = 1;
+
+    if (t < appearPortion) {
+      const p = t / appearPortion;
+      const e = 1 - Math.pow(1 - p, 3);
+      transY = lerp(fontSize * 0.8, 0, e);
+      scaleY = lerp(0.86, 1, e);
+      alpha = e;
+    } else if (t < appearPortion + holdPortion) {
+      const p = (t - appearPortion) / holdPortion;
+      transY = Math.sin(p * Math.PI * 2 + i * 0.45) * fontSize * 0.03;
+      scaleY = 1;
+      alpha = 1;
+    } else {
+      const p =
+        (t - appearPortion - holdPortion) / (1 - appearPortion - holdPortion);
+      const e = p * p;
+      transY = lerp(0, -fontSize * 0.45, e);
+      scaleY = lerp(1, 0.95, e);
+      alpha = 1 - e;
+    }
+
+    const bright = "#f2f2f2";
+
+    const w = ctx.measureText(ch).width;
+
+    ctx.save();
+    ctx.translate(tx + w * 0.5, ty + transY);
+    ctx.scale(1, scaleY);
+    ctx.fillStyle = bright;
+    ctx.globalAlpha = alpha;
+    ctx.fillText(ch, -w * 0.5, 0);
+    ctx.restore();
+
+    // Underline dot
+    ctx.beginPath();
+    ctx.arc(
+      tx + w * 0.5,
+      ty + fontSize * 0.62,
+      2 * (0.35 + 0.65 * alpha),
+      0,
+      Math.PI * 2,
+    );
+    ctx.fillStyle = bright;
+    ctx.globalAlpha = 0.3 * alpha;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    tx += w;
+  });
+
+  // Label
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `${Math.max(9, cellH * 0.035)}px 'SF Mono', monospace`;
+  ctx.fillText("Staggered Text", 10, hh - 10);
+
+  ctx.restore();
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Center mark — subtle Mimesis logo intersection
+  // ══════════════════════════════════════════════════════════════════════════
+  const markR = Math.min(cellW, cellH) * 0.022;
+  const markPulse = 0.7 + 0.3 * Math.sin(f * 0.06);
+  ctx.beginPath();
+  ctx.arc(hw, hh, markR * markPulse, 0, Math.PI * 2);
+  ctx.fillStyle = "#f5f0eb";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.15)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
 }
