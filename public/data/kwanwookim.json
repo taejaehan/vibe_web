@@ -1,9 +1,9 @@
 {
   "id": "kwanwookim",
-  "title": "Random Typography",
-  "description": "랜덤하게 변하는 글자들이 공간을 떠다니는 타이포그래피 비주얼",
-  "url": "https://random-typeface.vercel.app/",
-  "stack": ["Canvas 2D", "Typography", "Generative Art"],
-  "author": "Kwanwookim",
+  "title": "reffect - Motion Creator",
+  "description": "SVG 로고를 업로드하면 파티클, 엘립스 그리드, 스타 글린트 등 6가지 모션 이펙트를 실시간으로 적용하고 내보낼 수 있는 크리에이티브 툴",
+  "url": "https://reffect-motion-creator.vercel.app/",
+  "stack": ["React", "Canvas 2D", "Vite", "Creative Tool"],
+  "author": "RIT STUDIO",
   "code": "projects/kwanwookim/main.js"
 }
