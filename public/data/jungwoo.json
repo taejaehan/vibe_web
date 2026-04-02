@@ -1,0 +1,9 @@
+{
+  "id": "jungwoo",
+  "title": "Jun Web Game Lab",
+  "description": "파칭코, 스타워즈 DOS 슈팅, 눈보라 속 네즈코 찾기 - 3가지 웹 게임을 즐길수 있는 사이트",
+  "url": "https://jun-web-game-lab.vercel.app/",
+  "stack": ["Three.js", "R3F", "Matter.js", "Phaser3"],
+  "author": "jungwoo",
+  "code": "projects/jungwoo/main.js"
+}
