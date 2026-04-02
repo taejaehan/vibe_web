@@ -1,0 +1,9 @@
+{
+  "id": "leeyongho",
+  "title": "SpongeBot Chat",
+  "description": "바보 스펀지밥이랑 대화하는 AI 채팅 사이트 — 멍청하지만 귀엽게 대답해줍니다",
+  "url": "https://6d8dd06ce6fa592829.gradio.live/",
+  "stack": ["Gradio", "Python", "Canvas 2D"],
+  "author": "leeyongho",
+  "code": "projects/leeyongho/main.js"
+}
