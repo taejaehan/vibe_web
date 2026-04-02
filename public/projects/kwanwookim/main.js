@@ -1,87 +1,125 @@
-// 랜덤 타이포그래피 비주얼 — Kwanwookim
-const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?';
-const WORDS = ['TYPE', 'VIBE', 'WAVE', 'GLYPH', 'FLUX', 'CODE', 'FORM', 'DRIFT'];
+// reffect - Motion Creator — RIT STUDIO
 
 function setup(cell) {
-  const count = 30;
-  cell.data.glyphs = [];
-  for (let i = 0; i < count; i++) {
-    cell.data.glyphs.push({
-      x: Math.random(),
-      y: Math.random(),
-      char: CHARS[Math.floor(Math.random() * CHARS.length)],
-      size: 0.04 + Math.random() * 0.08,
-      speed: 0.002 + Math.random() * 0.004,
-      phase: Math.random() * Math.PI * 2,
-      hue: Math.random() * 360,
-      opacity: 0.4 + Math.random() * 0.6,
-      changeRate: Math.floor(20 + Math.random() * 60),
+  cell.data.stars = [];
+  for (let i = 0; i < 6; i++) {
+    cell.data.stars.push({
+      x: 0.1 + Math.random() * 0.8,
+      y: 0.1 + Math.random() * 0.8,
+      birth: Math.floor(Math.random() * 150),
+      life: 70 + Math.floor(Math.random() * 80),
     });
   }
-  cell.data.wordIndex = 0;
-  cell.data.wordX = 0.5;
-  cell.data.wordY = 0.5;
+}
+
+function drawGlint(ctx, x, y, size, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = Math.max(0.5, size * 0.06);
+  ctx.lineCap = 'round';
+
+  // 가로 암
+  ctx.beginPath();
+  ctx.moveTo(x - size, y);
+  ctx.bezierCurveTo(x - size * 0.2, y - size * 0.04, x - size * 0.05, y, x, y);
+  ctx.bezierCurveTo(x + size * 0.05, y, x + size * 0.2, y + size * 0.04, x + size, y);
+  ctx.stroke();
+
+  // 세로 암
+  ctx.beginPath();
+  ctx.moveTo(x, y - size);
+  ctx.bezierCurveTo(x + size * 0.04, y - size * 0.2, x, y - size * 0.05, x, y);
+  ctx.bezierCurveTo(x, y + size * 0.05, x - size * 0.04, y + size * 0.2, x, y + size);
+  ctx.stroke();
+
+  // 중심 점
+  ctx.beginPath();
+  ctx.arc(x, y, size * 0.07, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  ctx.restore();
 }
 
 function draw(ctx, world) {
   const { cellW, cellH, frame, myData } = world;
-  const glyphs = myData.glyphs;
 
-  // 잔상 효과 배경
-  ctx.fillStyle = 'rgba(5, 5, 15, 0.18)';
+  // 배경
+  ctx.fillStyle = '#080808';
   ctx.fillRect(0, 0, cellW, cellH);
 
-  // 떠다니는 글리프들
-  for (let i = 0; i < glyphs.length; i++) {
-    const g = glyphs[i];
+  // 엘립스 그리드
+  const cols = 13;
+  const rows = 9;
+  const padX = cellW * 0.06;
+  const padY = cellH * 0.08;
+  const stepX = (cellW - padX * 2) / (cols - 1);
+  const stepY = (cellH - padY * 2) / (rows - 1);
+  const maxR = stepX * 0.38;
 
-    // 프레임마다 랜덤하게 문자 교체
-    if (frame % g.changeRate === i % g.changeRate) {
-      g.char = CHARS[Math.floor(Math.random() * CHARS.length)];
-      g.hue = (g.hue + 30 + Math.random() * 60) % 360;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = padX + c * stepX;
+      const y = padY + r * stepY;
+
+      const nx = c / (cols - 1) - 0.5;
+      const ny = r / (rows - 1) - 0.5;
+      const dist = Math.sqrt(nx * nx + ny * ny);
+      const wave = Math.sin(frame * 0.045 - dist * 10 + c * 0.3);
+      const t = wave * 0.5 + 0.5; // 0~1
+
+      const rx = maxR * (0.15 + 0.85 * t);
+      const ry = rx * 0.55;
+      const alpha = 0.2 + 0.7 * t;
+
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+      ctx.fill();
     }
-
-    // 위치 애니메이션
-    const px = (g.x + Math.sin(frame * g.speed + g.phase) * 0.12) * cellW;
-    const py = (g.y + Math.cos(frame * g.speed * 0.7 + g.phase) * 0.1) * cellH;
-
-    const fontSize = g.size * cellW;
-    ctx.font = `bold ${fontSize}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    // 글로우 효과
-    ctx.shadowColor = `hsl(${g.hue}, 100%, 60%)`;
-    ctx.shadowBlur = fontSize * 0.8;
-    ctx.fillStyle = `hsla(${g.hue}, 90%, 70%, ${g.opacity})`;
-    ctx.fillText(g.char, px, py);
-    ctx.shadowBlur = 0;
   }
 
-  // 중앙 단어 — 천천히 페이드 인/아웃
-  const wordCycle = 120;
-  const t = frame % wordCycle;
-  const wordIdx = Math.floor(frame / wordCycle) % WORDS.length;
-  const alpha = t < 20 ? t / 20 : t > 100 ? (wordCycle - t) / 20 : 1;
-  const word = WORDS[wordIdx];
+  // 스타 글린트
+  const stars = myData.stars;
+  for (let i = 0; i < stars.length; i++) {
+    const s = stars[i];
+    const age = (frame - s.birth + 600) % 600;
+    if (age > s.life) {
+      if (age > s.life + 2) {
+        stars[i] = {
+          x: 0.1 + Math.random() * 0.8,
+          y: 0.1 + Math.random() * 0.8,
+          birth: frame,
+          life: 70 + Math.floor(Math.random() * 80),
+        };
+      }
+      continue;
+    }
+    const t = age / s.life;
+    const alpha = Math.sin(t * Math.PI);
+    const size = cellW * 0.055 * Math.sin(t * Math.PI);
+    drawGlint(ctx, s.x * cellW, s.y * cellH, size, alpha);
+  }
 
-  const wSize = cellW * 0.13;
-  ctx.font = `900 ${wSize}px monospace`;
+  // 중앙 텍스트 — REFFECT
+  const textSize = cellW * 0.11;
+  ctx.font = `900 ${textSize}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  const wHue = (frame * 0.8) % 360;
-  ctx.shadowColor = `hsl(${wHue}, 100%, 65%)`;
-  ctx.shadowBlur = wSize * 1.2;
-  ctx.fillStyle = `hsla(${wHue}, 100%, 85%, ${alpha})`;
-  ctx.fillText(word, cellW / 2, cellH / 2);
+  const pulse = 0.75 + 0.25 * Math.sin(frame * 0.03);
+  ctx.shadowColor = 'rgba(255,255,255,0.6)';
+  ctx.shadowBlur = textSize * 0.6 * pulse;
+  ctx.fillStyle = `rgba(255,255,255,${0.85 + 0.15 * pulse})`;
+  ctx.fillText('REFFECT', cellW / 2, cellH / 2);
   ctx.shadowBlur = 0;
 
-  // 하단 ID 표시
-  const idSize = cellW * 0.04;
-  ctx.font = `${idSize}px monospace`;
+  // 하단 라벨
+  const labelSize = cellW * 0.038;
+  ctx.font = `${labelSize}px monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillStyle = `hsla(${(frame * 0.5) % 360}, 70%, 70%, 0.6)`;
-  ctx.fillText('kwanwookim', cellW / 2, cellH - cellH * 0.04);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.fillText('RIT STUDIO®', cellW / 2, cellH - cellH * 0.04);
 }
