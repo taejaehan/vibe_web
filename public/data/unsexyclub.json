@@ -1,0 +1,9 @@
+{
+  "id": "unsexyclub",
+  "title": "Neon Orbit",
+  "description": "60개의 네온 파티클이 원형 궤도를 따라 회전하며 잔상 트레일을 남기는 비주얼",
+  "url": "https://github.com/unsexyclub",
+  "stack": ["Canvas 2D", "JavaScript"],
+  "author": "unsexyclub",
+  "code": "projects/unsexyclub/main.js"
+}
